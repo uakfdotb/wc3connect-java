@@ -1,0 +1,30 @@
+body {
+	background-color: #F5F7FA;
+}
+
+.container {
+	margin-top: 25px;
+	max-width: 700px;
+}
+
+tr.game {
+	cursor: pointer;
+}
+
+tr.game:hover {
+	background-color: grey;
+}
+
+tr.game.selected {
+	background-color: green !important;
+}
+
+td.gameinfo h2 {
+	font-weight: normal;
+	font-size: 14px;
+}
+
+td.gameinfo table {
+	border-collapse: separate;
+	border-spacing: 15px 0px;
+}
