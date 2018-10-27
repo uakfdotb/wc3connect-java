@@ -2,9 +2,10 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+		<link rel="stylesheet" href="bootstrap.css">
 		<link rel="stylesheet" href="style.css">
 
 		<title>WC3Connect</title>
@@ -31,8 +32,8 @@
 				</div>
 				<div class="form-group row">
 					<div class="offset-sm-2 col-sm-10">
-						<button type="submit" class="btn btn-primary">Login</button>
-						<button id="signup_btn" type="submit" class="btn btn-primary">Sign Up</button>
+						<button type="submit" class="btn btn-primary step1_btn">Login</button>
+						<button id="signup_btn" type="submit" class="btn btn-primary step1_btn">Sign Up</button>
 					</div>
 				</div>
 			</form>
@@ -41,6 +42,26 @@
 			<h2>WC3Connect</h2>
 			<div id="versiondiv" class="alert alert-danger" style="display:none"></div>
 			<div id="motddiv" class="alert alert-info" style="display:none"></div>
+			<div id="wc3backupdiv" class="alert alert-warning wc3alert" style="display:none">
+				We detected your 1.30.1 WC3 installation at <span id="wc3backup_src"></span>.
+				<br />We recommend creating a backup of this installation in case you want to try the 1.30.2 patch, or in case you accidentally upgrade.
+				<br />Pressing Backup My WC3 below will copy your installation to <span id="wc3backup_home"></span>\wc3.
+				<br /><button id="wc3backup_btn" class="btn btn-primary">Backup My WC3</button>
+			</div>
+			<div id="wc3bad1div" class="alert alert-warning wc3alert" style="display:none">
+				We detected your installation at <span id="wc3bad1_dir"></span>, but it doesn't seem to be on the 1.30.1 patch.
+				<br />We recommend creating a backup of your 1.30.1 WC3 installation in case you want to try the 1.30.2 patch, or in case you accidentally upgrade.
+				<br />If you copy your 1.30.1 WC3 installation to <span id="wc3bad1_home"></span>\wc3, then we'll automatically detect it.
+			</div>
+			<div id="wc3bad2div" class="alert alert-warning wc3alert" style="display:none">
+				We were unable to detect your WC3 installation directory.
+				<br />We recommend creating a backup of your 1.30.1 WC3 installation in case you want to try the 1.30.2 patch, or in case you accidentally upgrade.
+				<br />If you copy your 1.30.1 WC3 installation to <span id="wc3bad2_home"></span>\wc3, then we'll automatically detect it.
+			</div>
+			<div id="wc3gooddiv" class="alert alert-info wc3alert" style="display:none">
+				Press Start WC3 below to start your 1.30.1 WC3 installation at <span id="wc3good_dir"></span>.
+				<button id="wc3good_btn" class="btn btn-primary">Start WC3</button>
+			</div>
 			<p>Select a game below. Then, go to Local Area Network in Warcraft III and join it!</p>
 			<div role="navigation">
 				<ul id="mtab" class="nav nav-pills" role="tablist">
@@ -52,6 +73,9 @@
 					</li>
 					<li role="presentation">
 						<a id="others-tab" data-toggle="pill" href="#others" role="tab" aria-controls="others">Others</a>
+					</li>
+					<li role="presentation">
+						<a id="unmoderated-tab" data-toggle="pill" href="#unmoderated" role="tab" aria-controls="unmoderated">Unmoderated</a>
 					</li>
 					<li role="presentation">
 						<a id="settings-tab" data-toggle="pill" href="#settings" role="tab" aria-controls="settings">Settings</a>
@@ -101,11 +125,33 @@
 						<tbody id="others-tbody"></tbody>
 					</table>
 				</div>
+				<div class="tab-pane" id="unmoderated" role="tabpanel" aria-labelledby="unmoderated-tab">
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Location</th>
+								<th>Gamename</th>
+								<th>Map</th>
+								<th>Host</th>
+								<th>Slots</th>
+							</tr>
+						</thead>
+						<tbody id="unmoderated-tbody"></tbody>
+					</table>
+				</div>
 				<div class="tab-pane" id="settings" role="tabpanel" aria-labelledby="settings-tab">
 					<div id="settingsinfo" class="alert alert-info" style="display:none"></div>
 					<div class="form-check">
 						<input type="checkbox" class="form-check-input" id="cfgNoBroadcast">
 						<label class="form-check-label" for="cfgNoBroadcast">Don't broadcast games to 255.255.255.255 (check when multiple players are on the same LAN)</label>
+					</div>
+					<div class="form-check" style="display:none">
+						<input type="checkbox" class="form-check-input" id="cfgEnableLAN">
+						<label class="form-check-label" for="cfgEnableLAN">Enable hosting from LAN (you'll need to set up port forwarding)</label>
+					</div>
+					<div class="form-check" style="display:none">
+						<input type="checkbox" class="form-check-input" id="cfgDisableInGameRefresh">
+						<label class="form-check-label" for="cfgDisableInGameRefresh">Stop refreshing the gamelist when a game is in-progress (may alleviate bandwidth issues)</label>
 					</div>
 					<div>
 						<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#validateModal">
@@ -121,7 +167,7 @@
 				<div class="modal-content">
 					<div class="modal-header">
 						<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-						<h4 class="modal-title">Modal title</h4>
+						<h4 class="modal-title">Validate Account</h4>
 					</div>
 					<div class="modal-body">
 						<p>To validate your WC3Connect account with your entgaming.net forum account, enter the validation key below.</p>
@@ -141,8 +187,28 @@
 			</div>
 		</div>
 
-		<script src="https://code.jquery.com/jquery-1.12.4.min.js" crossorigin="anonymous"></script>
-		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-		<script src="index.js"></script>
+		<div class="modal" id="progressModal" tabindex="-1" role="dialog">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+						<h4 class="modal-title">In Progress</h4>
+					</div>
+					<div class="modal-body">
+						<div id="progresserror" class="alert alert-danger" style="display:none"></div>
+						<div id="progressprogress">
+							<p>Operation in progress...</p>
+							<img src="/loading.gif" />
+						</div>
+					</div>
+					<div class="modal-footer">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="jquery.js"></script>
+		<script src="bootstrap.js"></script>
+		<script src="index.js?v=2018101904"></script>
 	</body>
 </html>

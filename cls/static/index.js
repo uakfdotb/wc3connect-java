@@ -28,6 +28,7 @@ $(document).ready(function() {
 			'username': $('#username').val(),
 			'password': $('#password').val(),
 		};
+		$('.step1_btn').prop('disabled', true);
 		$.post('/login', params, function(data) {
 			$('#username').val('');
 			$('#password').val('');
@@ -39,7 +40,9 @@ $(document).ready(function() {
 				$('#step2').css('display', '');
 				onLogin(data.session_key);
 			}
-		}, 'json');
+		}, 'json').always(function() {
+			$('.step1_btn').prop('disabled', false);
+		});
 	});
 
 	$('#signup_btn').click(function(e) {
@@ -48,6 +51,7 @@ $(document).ready(function() {
 			'username': $('#username').val(),
 			'password': $('#password').val(),
 		};
+		$('.step1_btn').prop('disabled', true);
 		$.post('/signup', params, function(data) {
 			$('#username').val('');
 			$('#password').val('');
@@ -57,7 +61,9 @@ $(document).ready(function() {
 				showMsg('Your account has been created. You can now login below.');
 			}
 			$('#username').focus();
-		}, 'json');
+		}, 'json').always(function() {
+			$('.step1_btn').prop('disabled', false);
+		});
 	});
 
 	$('#username').keypress(function() {
@@ -89,6 +95,39 @@ var onLogin = function(sessionKey) {
 	$.post('/get-config', function(data) {
 		if(data.no_broadcast) {
 			$('#cfgNoBroadcast').prop('checked', true);
+		}
+		if(data.enable_lan) {
+			$('#cfgEnableLAN').prop('checked', true);
+		}
+		if(data.disable_in_game_refresh) {
+			$('#cfgDisableInGameRefresh').prop('checked', true);
+		}
+	}, 'json');
+
+	var showWC3Alert = function(id) {
+		$('.wc3alert').css('display', 'none');
+		$('#' + id).css('display', '');
+	};
+
+	$.post('/wc3', function(data) {
+		if(data.installation && data.installation.correct_patch && data.installation.backup) {
+			$('#wc3good_dir').text(data.installation.path);
+			$('#wc3good_btn').data('path', data.installation.path)
+			showWC3Alert('wc3gooddiv');
+		} else if(data.home_dir) {
+			if(data.installation && data.installation.correct_patch) {
+				$('#wc3backup_src').text(data.installation.path);
+				$('#wc3backup_home').text(data.home_dir);
+				$('#wc3backup_btn').data('path', data.installation.path);
+				showWC3Alert('wc3backupdiv');
+			} else if(data.installation) {
+				$('#wc3bad1_dir').text(data.installation.path);
+				$('#wc3bad1_home').text(data.home_dir);
+				showWC3Alert('wc3bad1div');
+			} else {
+				$('#wc3bad2_home').text(data.home_dir);
+				showWC3Alert('wc3bad2div');
+			}
 		}
 	}, 'json');
 
@@ -161,12 +200,26 @@ var onLogin = function(sessionKey) {
 		}
 	};
 
-	var getGames = function() {
+	var getRefreshTime = function(counter) {
+		if(counter && counter < 3) {
+			return 1000;
+		} else {
+			return 3000;
+		}
+	};
+
+	var getGames = function(counter) {
 		$.post('/games', function(data) {
 			setGames($('#public-tbody'), data.publicGames);
 			setGames($('#autohost-tbody'), data.autohostGames);
 			setGames($('#others-tbody'), data.otherGames);
-		}, 'json');
+			setGames($('#unmoderated-tbody'), data.unmoderatedGames);
+		}, 'json')
+			.always(function() {
+				setTimeout(function() {
+					getGames(counter + 1);
+				}, getRefreshTime(counter));
+			});
 	};
 	$('tbody').on('click', 'tr.game', function() {
 		$('tr.game.selected').removeClass('selected');
@@ -176,7 +229,6 @@ var onLogin = function(sessionKey) {
 		$.post('/show', {'uid': uid});
 
 		if($(this).data('gameid')) {
-			console.log('adding stuff');
 			var row = $('<tr>')
 				.addClass('gameinfo')
 				.data('gameid', $(this).data('gameid'));
@@ -185,38 +237,55 @@ var onLogin = function(sessionKey) {
 				.attr('colspan', 5);
 			row = row.append(col);
 			$(this).after(row);
-			refreshInfo();
+			refreshInfo(true);
 		}
 	});
 	$('tbody').on('click', 'tr.gameinfo a', function(e) {
 		e.preventDefault();
 	});
-	var refreshInfo = function() {
+	var refreshInfo = function(norefresh) {
 		var row = $('tr.gameinfo');
 		if(row.length == 0) {
+			setTimeout(function() {
+				refreshInfo();
+			}, getRefreshTime());
 			return;
 		}
 		var gameid = row.data('gameid');
-		$.post('/gameinfo', {'gameid': gameid}, function(data) {
+		var post = $.post('/gameinfo', {'gameid': gameid}, function(data) {
 			row.children().html(data);
 		});
+		if(!norefresh) {
+			post.always(function() {
+				setTimeout(function() {
+					refreshInfo();
+				}, getRefreshTime());
+			});
+		}
 	};
-	getGames();
-	setInterval(function() {
-		getGames();
-	}, 1000);
-	setInterval(function() {
+	getGames(1);
+	setTimeout(function() {
 		refreshInfo();
 	}, 3000);
 
 	var setConfig = function() {
 		var params = {
 			'no_broadcast': $('#cfgNoBroadcast').prop('checked') ? 'yes' : '',
+			'enable_lan': $('#cfgEnableLAN').prop('checked') ? 'yes' : '',
+			'disable_in_game_refresh': $('#cfgDisableInGameRefresh').prop('checked') ? 'yes' : '',
 		};
 		$.post('/set-config', params);
 	};
 
 	$('#cfgNoBroadcast').change(function() {
+		setConfig();
+	});
+
+	$('#cfgEnableLAN').change(function() {
+		setConfig();
+	});
+
+	$('#cfgDisableInGameRefresh').change(function() {
 		setConfig();
 	});
 
@@ -243,5 +312,31 @@ var onLogin = function(sessionKey) {
 			}
 		}, 'json');
 		$('#validateModal').modal('hide')
+	});
+
+	$('#wc3backup_btn').click(function(e) {
+		e.preventDefault();
+		$('#progresserror').css('display', 'none');
+		$('#progressprogress').css('display', '');
+		$('#progressModal').modal('show');
+		var path = $('#wc3backup_btn').data('path');
+		$.post('/wc3-backup', {'path': path}, function(data) {
+			if(data.error) {
+				$('#progresserror').text(data.error);
+				$('#progresserror').css('display', '');
+				$('#progressprogress').css('display', 'none');
+				return;
+			}
+			$('#progressModal').modal('hide');
+			$('#wc3good_dir').text(data.path);
+			$('#wc3good_btn').data('path', data.path);
+			showWC3Alert('wc3gooddiv');
+		}, 'json');
+	});
+
+	$('#wc3good_btn').click(function(e) {
+		e.preventDefault();
+		var path = $('#wc3good_btn').data('path');
+		$.post('/wc3-start', {'path': path});
 	});
 };

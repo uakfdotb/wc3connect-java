@@ -10,14 +10,16 @@ public class GameInfo {
 	int hostCounter;
 	String gamename;
 	String map;
+	String extra;
 	long millis;
 
-	public GameInfo(int uid, byte[] addr, int port, int hostCounter, String gamename, String map) {
+	public GameInfo(int uid, byte[] addr, int port, int hostCounter, String gamename, String map, String extra) {
 		this.uid = uid;
 		this.remotePort = port;
 		this.hostCounter = hostCounter;
 		this.gamename = gamename;
 		this.map = map;
+		this.extra = extra;
 		this.millis = System.currentTimeMillis();
 
 		try {

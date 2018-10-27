@@ -36,8 +36,10 @@ public class ECConnection {
 	Integer localSync;
 	DataOutputStream remoteOut;
 
+	long nameMismatchWarning = 0;
 	String name;
-	long sessionkey; //entry key to use to connect to server; GC uses spoofcheck so this should by 0
+	String lanUsername;
+	String sessionKey;
 	GameInfo gameInfo; //host's game information, includes host counter and GCloud bot ID
 
 	boolean terminated;
@@ -67,10 +69,10 @@ public class ECConnection {
 	int remotePort;
 	int remoteKey;
 
-	public ECConnection(ECHost host, Socket socket, String name, long sessionKey) {
+	public ECConnection(ECHost host, Socket socket, String name, String sessionKey) {
 		this.host = host;
 		this.localSocket = socket;
-		this.sessionkey = sessionKey;
+		this.sessionKey = sessionKey;
 		this.gproxyEnabled = true;
 		this.name = name;
 
@@ -89,6 +91,10 @@ public class ECConnection {
 
 		laggers = new ArrayList<Integer>();
 		localBuffer = new LinkedList<byte[]>();
+
+		try {
+			localSocket.setTcpNoDelay(true);
+		} catch(Exception e) {}
 
 		try {
 			localOut = new DataOutputStream(localSocket.getOutputStream());
@@ -180,6 +186,9 @@ public class ECConnection {
 			try {
 				remoteSocket = new Socket();
 				remoteSocket.setSoTimeout(15000);
+				try {
+					remoteSocket.setTcpNoDelay(true);
+				} catch(Exception e) {}
 				InetSocketAddress remoteSocketAddress = new InetSocketAddress(remoteAddress, remotePort);
 				System.out.println("[ECConnection] Making direct connection (no proxy set)");
 				remoteSocket.connect(remoteSocketAddress, 15000);
@@ -348,6 +357,11 @@ public class ECConnection {
 				}
 			}
 
+			if(this.nameMismatchWarning != 0 && System.currentTimeMillis() - this.nameMismatchWarning > 1000) {
+				this.nameMismatchWarning = 0;
+				this.sendLocalChat("WC3Connect warning: your LAN username (" + this.lanUsername + ") doesn't match your WC3Connect username (" + this.name + "). This could cause desyncs on some maps. We recommend rejoining after correcting the LAN username.");
+			}
+
 			if(identifier == 4) { //SLOTINFOJOIN
 				if(len >= 2) {
 					int slotInfoSize = buf.get(0) + buf.get(1) * 256;
@@ -360,7 +374,7 @@ public class ECConnection {
 
 				Map<String, String> m = new HashMap<String, String>();
 				m.put("username", this.name);
-				m.put("sessionkey", "" + this.sessionkey);
+				m.put("sessionkey", this.sessionKey);
 				m.put("gamename", this.gameInfo.gamename);
 				try {
 					Utils.postForm("https://connect.entgaming.net/spoofcheck", m);
@@ -608,10 +622,15 @@ public class ECConnection {
 			}
 
 			int entryKey = buf.getInt();
+			if(entryKey != 0) {
+				// probably joining a game hosted from WC3 client, not host bot
+				this.gproxyEnabled = false;
+			}
 			byte unknown = buf.get();
 			short listenPort = buf.getShort();
 			int peerKey = buf.getInt();
 			String name = ECUtil.getTerminatedString(buf);
+			this.lanUsername = name;
 
 			int remainderLength = len - buf.position();
 
@@ -622,6 +641,8 @@ public class ECConnection {
 			if(rewrittenUsernameStr.equalsIgnoreCase(name)) {
 				rewrittenUsernameStr = name;
 				this.name = name; // make sure case is right for the spoofcheck via connect.entgaming.net
+			} else {
+				this.nameMismatchWarning = System.currentTimeMillis();
 			}
 
 			byte[] rewrittenUsername = ECUtil.strToBytes(rewrittenUsernameStr); //replace LAN name with actual GC name (but use LAN name case if they're the same)
@@ -634,7 +655,6 @@ public class ECConnection {
 			lbuf.putShort((short) rewrittenLength); //W3GS packet length must include header
 
 			lbuf.putInt(gameInfo.hostCounter);
-			//lbuf.putInt(sessionkey);
 			lbuf.putInt(entryKey);
 
 			lbuf.put(unknown);
@@ -654,6 +674,9 @@ public class ECConnection {
 			try {
 				System.out.println("[ECConnection] Found game: " + gameInfo.remoteAddress.getHostAddress() + ":" + gameInfo.remotePort + "; connecting");
 				remoteSocket = new Socket(remoteAddress, remotePort);
+				try {
+					remoteSocket.setTcpNoDelay(true);
+				} catch(Exception e) {}
 				remoteOut = new DataOutputStream(remoteSocket.getOutputStream());
 				new ECForward(this, true, remoteSocket);
 			} catch(IOException ioe) {

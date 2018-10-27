@@ -38,6 +38,7 @@ public class Web {
 		server.createContext("/signup", new SignupHandler());
 		server.createContext("/games", new GamesHandler(this));
 		server.createContext("/motd", new MotdHandler());
+		server.createContext("/version", new VersionHandler());
 		server.createContext("/gameinfo", new GameInfoHandler());
 		server.createContext("/show", new ShowHandler(this));
 		server.createContext("/validate", new ValidateHandler(this));
@@ -63,9 +64,9 @@ public class Web {
 	static class LoginResult {
 		int war3Version;
 		String name;
-		long sessionKey;
+		String sessionKey;
 
-		LoginResult(int war3Version, String name, long sessionKey) {
+		LoginResult(int war3Version, String name, String sessionKey) {
 			this.war3Version = war3Version;
 			this.name = name;
 			this.sessionKey = sessionKey;
@@ -163,11 +164,13 @@ public class Web {
 		List<WebGame> pub;
 		List<WebGame> autohost;
 		List<WebGame> others;
+		List<WebGame> unmoderated;
 
 		public WebGamelist() {
 			this.pub = new ArrayList<WebGame>();
 			this.autohost = new ArrayList<WebGame>();
 			this.others = new ArrayList<WebGame>();
+			this.unmoderated = new ArrayList<WebGame>();
 		}
 
 		static JSONArray encodeList(List<WebGame> l) {
@@ -183,6 +186,7 @@ public class Web {
 			obj.put("publicGames", WebGamelist.encodeList(this.pub));
 			obj.put("autohostGames", WebGamelist.encodeList(this.autohost));
 			obj.put("otherGames", WebGamelist.encodeList(this.others));
+			obj.put("unmoderatedGames", WebGamelist.encodeList(this.unmoderated));
 			return obj;
 		}
 	}
@@ -215,10 +219,11 @@ public class Web {
 		}
 
 		public void handle(HttpExchange t) throws IOException {
-			byte[] request = Utils.streamToByteArray(t.getRequestBody());
+			Map<String, String> postForm = Web.getPostForm(t);
+			postForm.put("version", "2");
 			String response;
 			try {
-				response = Utils.post("https://connect.entgaming.net/gwc-login", request);
+				response = Utils.postForm("https://connect.entgaming.net/gwc-login", postForm);
 			} catch(Exception e) {
 				Utils.respondError(t, "Error logging in: " + e.getMessage() + ".");
 				return;
@@ -232,7 +237,7 @@ public class Web {
 				return;
 			}
 			synchronized(web) {
-				web.loginResult = new LoginResult(obj.getInt("war3version"), obj.getString("name"), obj.getLong("session_key"));
+				web.loginResult = new LoginResult(obj.getInt("war3version"), obj.getString("name"), obj.getString("session_key2"));
 				if(web.host == null) {
 					web.host = new ECHost(web.loginResult.war3Version, web.loginResult.name, web.loginResult.sessionKey);
 					web.host.init();
@@ -320,6 +325,9 @@ public class Web {
 					} else {
 						games.others.add(webGame);
 					}
+				} else if(game.extra.length() > 0) {
+					webGame.location = game.extra;
+					games.unmoderated.add(webGame);
 				} else {
 					System.out.println("[web] ignoring game with ip=" + webGame.ip);
 				}
@@ -328,6 +336,7 @@ public class Web {
 			Collections.sort(games.pub);
 			Collections.sort(games.autohost);
 			Collections.sort(games.others);
+			Collections.sort(games.unmoderated);
 			Utils.respondJSON(t, games.encode());
 		}
 	}
@@ -338,6 +347,16 @@ public class Web {
 			motd = motd.trim();
 			JSONObject obj = new JSONObject();
 			obj.put("motd", motd);
+			Utils.respondJSON(t, obj);
+		}
+	}
+
+	static class VersionHandler implements HttpHandler {
+		public void handle(HttpExchange t) throws IOException {
+			String versionStr = Utils.get("https://entgaming.net/entconnect/wc3connect_java_version.php");
+			Integer version = Integer.parseInt(versionStr.trim());
+			JSONObject obj = new JSONObject();
+			obj.put("up_to_date", version <= Main.Version);
 			Utils.respondJSON(t, obj);
 		}
 	}
@@ -402,7 +421,7 @@ public class Web {
 			}
 			Map<String, String> m = new HashMap<String, String>();
 			m.put("username", loginResult.name);
-			m.put("sessionkey", "" + loginResult.sessionKey);
+			m.put("sessionkey", loginResult.sessionKey);
 			m.put("key", key);
 			JSONObject obj = new JSONObject(Utils.postForm("https://connect.entgaming.net/gwc-validate", m));
 			if(obj.has("error")) {

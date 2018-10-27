@@ -33,14 +33,14 @@ public class ECHost implements Runnable {
 
 	int war3version;
 	String name;
-	long sessionKey;
+	String sessionKey;
 
 	int serverPort = 7112;
 	int counter = 0; //game counter
 
 	boolean terminated = false;
 
-	public ECHost(int war3Version, String name, long sessionKey) {
+	public ECHost(int war3Version, String name, String sessionKey) {
 		this.war3version = war3Version;
 		this.name = name;
 		this.sessionKey = sessionKey;
@@ -59,7 +59,7 @@ public class ECHost implements Runnable {
 		this.buf = ByteBuffer.allocate(65536);
 	}
 
-	public void update(int war3Version, String name, long sessionKey) {
+	public void update(int war3Version, String name, String sessionKey) {
 		synchronized(this) {
 			this.war3version = war3Version;
 			this.name = name;
@@ -205,6 +205,9 @@ public class ECHost implements Runnable {
 		int senderPort = ECUtil.unsignedShort(lbuf.getShort());
 		buf.putShort((short) serverPort); //port
 
+		// connect.entgaming.net adds username as extra field at the end
+		String extra = ECUtil.getTerminatedString(lbuf);
+
 		//assign length in little endian
 		int length = buf.position();
 		buf.putShort(2, (short) length);
@@ -215,7 +218,7 @@ public class ECHost implements Runnable {
 		buf.get(packetBytes);
 
 		//create new gameinfo
-		GameInfo game = new GameInfo(counter++, addr, senderPort, hostCounter, gamename, mapPath);
+		GameInfo game = new GameInfo(counter++, addr, senderPort, hostCounter, gamename, mapPath, extra);
 
 		synchronized(this.games) {
 			this.games.put(game.uid, game);
