@@ -364,7 +364,7 @@ public class ECConnection {
 
 			if(identifier == 4) { //SLOTINFOJOIN
 				if(len >= 2) {
-					int slotInfoSize = buf.get(0) + buf.get(1) * 256;
+					int slotInfoSize = Utils.unsignedByte(buf.get(0)) + Utils.unsignedByte(buf.get(1)) * 256;
 
 					if(len >= 3 + slotInfoSize) {
 						pid = buf.get(2 + slotInfoSize);

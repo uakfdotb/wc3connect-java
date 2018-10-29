@@ -93,4 +93,8 @@ public class Utils {
 		obj.put("error", msg);
 		respondJSON(t, obj);
 	}
+
+	public static int unsignedByte(byte x) {
+		return ((int) x) & 0xFF;
+	}
 }

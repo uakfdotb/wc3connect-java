@@ -14,7 +14,7 @@ import javax.swing.JFrame;
 public class Main {
 	public static Map<String, String> ThirdPartyBotMap = new HashMap<String, String>();
 	public static boolean Debug = true;
-	public static int Version = 2018102601;
+	public static int Version = 2018102602;
 
 	public static void main(String[] args) throws java.io.IOException {
 		ThirdPartyBotMap.put("192.99.6.98", "MMH-USA");
