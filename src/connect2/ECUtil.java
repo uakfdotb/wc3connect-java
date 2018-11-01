@@ -2,6 +2,7 @@ package connect2;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,12 +66,7 @@ public class ECUtil {
 	}
 
 	public static byte[] strToBytes(String str) {
-		try {
-			return str.getBytes("UTF-8");
-		} catch(UnsupportedEncodingException uee) {
-			System.out.println("[ECUtil] UTF-8 is an unsupported encoding: " + uee.getLocalizedMessage());
-			return str.getBytes();
-		}
+		return str.getBytes(StandardCharsets.UTF_8);
 	}
 
 	public static byte[] encodeStatString(byte[] data)
