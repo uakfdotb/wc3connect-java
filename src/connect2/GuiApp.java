@@ -16,7 +16,7 @@ public class GuiApp {
         launch.addActionListener(e -> this.launch());
         exit.addActionListener(e -> System.exit(0));
 
-        if(Desktop.isDesktopSupported() && !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)){
+        if(!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)){
             launch.setEnabled(false);
             launch.setText("Open your webbrowser and go to: 127.0.0.1:8033");
         }
