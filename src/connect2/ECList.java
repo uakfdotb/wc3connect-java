@@ -1,18 +1,10 @@
 package connect2;
 
-import java.awt.Color;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
 import org.json.JSONArray;
+
 import javax.net.ssl.HttpsURLConnection;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 public class ECList implements Runnable {
 	ECHost host;
