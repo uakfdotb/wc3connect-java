@@ -18,6 +18,8 @@ public class Main {
 
 		if(!GraphicsEnvironment.isHeadless()){
 			new GuiApp();
+		} else {
+			System.out.println("Open your webbrowser and go to: 127.0.0.1:8033");
 		}
 	}
 
